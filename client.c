@@ -10,8 +10,13 @@ int main(int argc, char *argv[]){
 	struct sockaddr_in server, client;
 	long sd;
 	
-	printf("\n\t\t\t*************************\n\t\t\t*\t  CLIENT\t*\n\t\t\t*************************\n\n");
-	printf("Inserisci il tuo nome: ");
+	printf("\n\e[34m\e[1m@@@@@@   @@       @@   @@@@@@   @@@@  @@   @@@@@@\e[22m\e[39m\n");
+ 	printf("\e[34m\e[1m@@       @@       @@   @@       @@ @@ @@     @@\e[22m\e[39m\n");
+ 	printf("\e[34m\e[1m@@       @@       @@   @@@@@@   @@   @@@     @@\e[22m\e[39m\n");
+ 	printf("\e[34m\e[1m@@       @@       @@   @@       @@    @@     @@\e[22m\e[39m\n");
+ 	printf("\e[34m\e[1m@@@@@@   @@@@@@   @@   @@@@@@   @@    @@     @@\e[22m\e[39m\n");
+	
+	printf("\nInserisci il tuo nome: ");
 	if(scanf("%ms", &nome_client) == EOF){
 		free(nome_client);
 		exit(-1);
@@ -45,8 +50,9 @@ int main(int argc, char *argv[]){
 		printf("error code %d\n", errno);
 		exit(EXIT_FAILURE);
 	}
+
 	
-	printf("Connesso al server - Digita 'quit' per interrompere la connessione\n\n");
+	printf("Connesso al server - Digita '\e[1mquit\e[22m' per interrompere la connessione\n\n");
 	pthread_t thread;
 	thread_padre = pthread_self();
 	
@@ -58,7 +64,7 @@ int main(int argc, char *argv[]){
 	sent = 0;
 	char *message_input, *message_input_send;
 	while(1){
-		reset:	
+		reset:
 			message_input = (char *)malloc(MAX_READER);
 			if(fgets(message_input, MAX_READER, stdin) == NULL){
 				free(message_input);
@@ -70,7 +76,7 @@ int main(int argc, char *argv[]){
 			sprintf(message_input_send, "%s: %s", nome_client, message_input);
 			
 			if(strcmp(message_input, "quit") == 0 && sent == 0){
-				printf("\t** Chiusura del canale di comunicazione **\n");
+				printf("\t*** \e[1mChiusura del canale di comunicazione\e[22m ***\n");
 				close(sd);
 				free(message_input);
 				free(message_input_send);
@@ -110,7 +116,7 @@ void *gestione_comunicazione(void *argument){
 		}
 		message_server[c] = '\0';
 		
-		if(strcmp(message_server, "     *** Digita per parlare! ***\n") == 0){
+		if(strcmp(message_server, "\n     *** \e[1mDigita per parlare!\e[22m ***\n") == 0){
 			sent = 1;
 		}
 		
