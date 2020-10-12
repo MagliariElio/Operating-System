@@ -364,17 +364,12 @@ int cerca_client(int i, char *seleziona, int descpritor){
 			
 			pthread_mutex_lock(sem);
 			if(tabella_thread[j]->nome_client == NULL){
-				printf("seleziona: %s\n", seleziona);
-				printf("numero: %d\n", j);
 				pthread_mutex_unlock(sem);
 				continue;
 			}
 			
 			if(strcmp(tabella_thread[j]->nome_client, seleziona) == 0){
 				if(busy[j] == 0 || tabella_thread[j]->disponibile == 0){
-					printf("NUMERO: %d\n", j);
-					printf("busy: %d\n", busy[j]);
-					printf("tabella disponibile: %d\nnome: %s\n", tabella_thread[j]->disponibile, seleziona);
 					send(dsc[0], "\n   --- \e[1mUtente occupato in un'altra richiesta!\e[22m ---\a", strlen("\n   --- \e[1mUtente occupato in un'altra richiesta!\e[22m ---\a"), 0);
 					pthread_mutex_unlock(sem);
 					free(cerca);
@@ -396,7 +391,6 @@ int cerca_client(int i, char *seleziona, int descpritor){
 				
 				pthread_mutex_lock(sem);
 				dsc[1] = fd[j];
-				printf("busy modificato\n");
 				busy[j] = 0;
 				pthread_mutex_unlock(sem);
 				connessione_richiesta[j] = 0;
@@ -438,7 +432,6 @@ send(dsc[1], "   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare 
 					
 					risposta[strlen(risposta)] = '\0';
 					
-					printf("risposta:%s\n", risposta);
 					
 					if(strcmp(risposta, "quit") == 0){
 						printf("Client[%ld] si è disconnesso dal server\n", j);
