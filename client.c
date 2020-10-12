@@ -3,18 +3,54 @@
 
 char*nome_client;
 int sent;
+long sd;
 pthread_t thread_padre;
+pthread_t thread;
 void *gestione_comunicazione(void *argument);
+
+
+
+void exit_thread(int signo){
+	pthread_exit(NULL);
+}
+
+
+void gestione_uscita(int signo){
+	
+	
+	if(sent == 0){
+		printf("\t*** \e[1mChiusura del canale di comunicazione\e[22m ***\n");
+		send(sd, "quit", strlen("quit"), 0);
+		close(sd);
+		if(thread == pthread_self()){
+			pthread_kill(thread_padre, SIGUSR1);
+		}
+		else{
+			pthread_kill(thread, SIGUSR1);
+		}
+		pthread_exit(NULL);
+	}
+	
+	sent = 0;
+	char *close_chat;
+	close_chat = (char *)malloc(MAX_READER);
+	sprintf(close_chat, "%s: %s", nome_client, "quit");
+	send(sd, close_chat, strlen(close_chat), 0);
+
+}
+
 
 int main(int argc, char *argv[]){
 	struct sockaddr_in server, client;
-	long sd;
 	
-	printf("\n\e[34m\e[1m@@@@@@   @@       @@   @@@@@@   @@@@  @@   @@@@@@\e[22m\e[39m\n");
- 	printf("\e[34m\e[1m@@       @@       @@   @@       @@ @@ @@     @@\e[22m\e[39m\n");
- 	printf("\e[34m\e[1m@@       @@       @@   @@@@@@   @@   @@@     @@\e[22m\e[39m\n");
- 	printf("\e[34m\e[1m@@       @@       @@   @@       @@    @@     @@\e[22m\e[39m\n");
- 	printf("\e[34m\e[1m@@@@@@   @@@@@@   @@   @@@@@@   @@    @@     @@\e[22m\e[39m\n");
+	signal(SIGINT, gestione_uscita);
+	signal(SIGUSR1, exit_thread);
+	
+	printf("\n\t\t\e[34m\e[1m@@@@@@   @@       @@   @@@@@@   @@@@  @@   @@@@@@\e[22m\e[39m\n");
+ 	printf("\t\t\e[34m\e[1m@@       @@       @@   @@       @@ @@ @@     @@\e[22m\e[39m\n");
+ 	printf("\t\t\e[34m\e[1m@@       @@       @@   @@@@@@   @@   @@@     @@\e[22m\e[39m\n");
+ 	printf("\t\t\e[34m\e[1m@@       @@       @@   @@       @@    @@     @@\e[22m\e[39m\n");
+ 	printf("\t\t\e[34m\e[1m@@@@@@   @@@@@@   @@   @@@@@@   @@    @@     @@\e[22m\e[39m\n");
 	
 	printf("\nInserisci il tuo nome: ");
 	if(scanf("%ms", &nome_client) == EOF){
@@ -53,7 +89,6 @@ int main(int argc, char *argv[]){
 
 	
 	printf("Connesso al server - Digita '\e[1mquit\e[22m' per interrompere la connessione\n\n");
-	pthread_t thread;
 	thread_padre = pthread_self();
 	
 	send(sd, nome_client, strlen(nome_client), 0);
@@ -68,7 +103,7 @@ int main(int argc, char *argv[]){
 			message_input = (char *)malloc(MAX_READER);
 			if(fgets(message_input, MAX_READER, stdin) == NULL){
 				free(message_input);
-				goto reset;
+				//goto reset;
 			}
 			
 			message_input[strlen(message_input)-1] = '\0';
@@ -86,7 +121,8 @@ int main(int argc, char *argv[]){
 			
 			if(sent == 1){
 				send(sd, message_input_send, strlen(message_input_send), 0);
-			}else{
+			}
+			else{
 				send(sd, message_input, strlen(message_input), 0);
 			}
 			
@@ -111,13 +147,16 @@ void *gestione_comunicazione(void *argument){
 		
 		if(c == 0){
 			free(message_server);
-			pthread_kill(thread_padre, SIGKILL);
+			pthread_kill(thread_padre, SIGUSR1);
 			pthread_exit(NULL);
 		}
 		message_server[c] = '\0';
 		
-		if(strcmp(message_server, "\n     *** \e[1mDigita per parlare!\e[22m ***\n") == 0){
+		if(strcmp(message_server, "\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n") == 0){
+			printf("%s\n", message_server);
 			sent = 1;
+			free(message_server);
+			continue;
 		}
 		
 		if(strcmp(message_server, "***exItnOw***") == 0){

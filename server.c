@@ -5,6 +5,7 @@
 
 int fd[PENDING];													//mantiene tutti i socket client descriptor
 int busy[PENDING];													//tiene traccia dei client che stanno occupati a rispondere a una richiesta di chat
+int connessione_richiesta[PENDING];									//tiene traccia se un client propone di chattare
 void *identificazione(void *argument);								//identifica il client
 void client_online(void *argument);									//stampa i client disponibili online
 int cerca_client(int, char *, int);									//cerca il client selezionato
@@ -26,14 +27,11 @@ struct value{
 };
 
 
-
-
 struct tabella **tabella_thread;
 pthread_mutex_t *sem;
 int passaggio[3];
 int entry, exit_client;
-
-
+char **risposta_connessione_richiesta;
 
 
 void client_exit_attesa(int signo){
@@ -47,6 +45,7 @@ void dealloca_memoria(int i){
 	free(tabella_thread[i]->indirizzo_ip);
 	tabella_thread[i]->disponibile = -1;
 	fd[i] = -1;
+	busy[i] = -1;
 	pthread_mutex_unlock(sem);
 	
 	pthread_exit(NULL);
@@ -90,7 +89,6 @@ void *listen_client(void *argument){
 
 
 
-
 int main(){
     struct sockaddr_in server, client[PENDING];
     int sd;
@@ -98,11 +96,11 @@ int main(){
     socklen_t addrlen;
 	pthread_t thread[PENDING];
 
-	printf("\n\e[91m\e[1m@@@@@@   @@@@@@   @@@@@@   @@    @@   @@@@@@   @@@@@@\e[22m\e[39m\n");
-	printf("\e[91m\e[1m@@       @@       @@  @@   @@    @@   @@       @@  @@\e[22m\e[39m\n");
-	printf("\e[91m\e[1m@@@@@@   @@@@@@   @@@@@@   @@    @@   @@@@@@   @@@@@@\e[22m\e[39m\n");
-	printf("\e[91m\e[1m    @@   @@       @@  @@    @@  @@    @@       @@  @@\e[22m\e[39m\n");
-	printf("\e[91m\e[1m@@@@@@   @@@@@@   @@   @@     @@      @@@@@@   @@   @@\e[22m\e[39m\n");
+	printf("\n\t\t\e[91m\e[1m@@@@@@   @@@@@@   @@@@@@   @@    @@   @@@@@@   @@@@@@\e[22m\e[39m\n");
+	printf("\t\t\e[91m\e[1m@@       @@       @@  @@   @@    @@   @@       @@  @@\e[22m\e[39m\n");
+	printf("\t\t\e[91m\e[1m@@@@@@   @@@@@@   @@@@@@   @@    @@   @@@@@@   @@@@@@\e[22m\e[39m\n");
+	printf("\t\t\e[91m\e[1m    @@   @@       @@  @@    @@  @@    @@       @@  @@\e[22m\e[39m\n");
+	printf("\t\t\e[91m\e[1m@@@@@@   @@@@@@   @@   @@     @@      @@@@@@   @@   @@\e[22m\e[39m\n");
     
     if((sd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ){
         printf("Errore init socket\n");
@@ -140,11 +138,13 @@ int main(){
 	addrlen = sizeof(client[0]);
 	sem = malloc(sizeof(pthread_mutex_t *));
 	tabella_thread = malloc(PENDING*sizeof(struct tabella *));
+	risposta_connessione_richiesta = (char **)malloc(PENDING*sizeof(char*));
 	
 	for(int x=0; x<PENDING; x++){
 		tabella_thread[x] = malloc(sizeof(struct tabella *));
 		fd[x] = -1;
-		busy[x] = 1;
+		busy[x] = -1;
+		connessione_richiesta[x] = 0;
 	}
 
 	id = 0;
@@ -237,7 +237,6 @@ void client_online(void *argument){
 
 	count = 0;
 	for(int j=0; j<PENDING; j++){
-		
 		count++;
 		pthread_mutex_lock(sem);
 		c = tabella_thread[j]->disponibile;
@@ -247,8 +246,13 @@ void client_online(void *argument){
 			count--;
 			stampa = (char *)malloc(MAX_READER);
 			
-			pthread_mutex_lock(sem);;
-			sprintf(stampa, " - \e[1m%-15s\e[22mIndirizzo IP:  \e[1m%s\e[22m", tabella_thread[j]->nome_client, tabella_thread[j]->indirizzo_ip);
+			pthread_mutex_lock(sem);
+			if(tabella_thread[j]->disponibile == 0){
+				sprintf(stampa, " - \e[1m\e[9m%-15s\e[29m\e[22mIndirizzo IP:  \e[1m%s\e[22m", tabella_thread[j]->nome_client, tabella_thread[j]->indirizzo_ip);
+			}
+			else{
+				sprintf(stampa, " - \e[1m%-15s\e[22mIndirizzo IP:  \e[1m%s\e[22m", tabella_thread[j]->nome_client, tabella_thread[j]->indirizzo_ip);
+			}
 			pthread_mutex_unlock(sem);
 			
 			nanosleep((const struct timespec[]){{0, 50000000L}}, NULL);
@@ -258,7 +262,11 @@ void client_online(void *argument){
 		}
 	}
 	
-	if(count == PENDING-1){
+	pthread_mutex_lock(sem);
+	c = tabella_thread[1]->disponibile;
+	pthread_mutex_unlock(sem);
+	
+	if(count == PENDING-1 && c == -1){
  		signal(SIGUSR1, client_exit_attesa);
 		struct value *head;
 		head = malloc(sizeof(struct value *));
@@ -302,7 +310,8 @@ void client_online(void *argument){
 		nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
 		send(dsc, "   *** Digita '\e[1maggiorna\e[22m' per aggiornare la lista  ***", strlen("   *** Digita '\e[1maggiorna\e[22m' per aggiornare la lista  ***"), 0);
 		
-		seleziona = (char *)malloc(MAX_READER);
+		start_from_here:
+			seleziona = (char *)malloc(MAX_READER);
 		
 		c = recv(dsc, seleziona, MAX_READER, 0);
 		seleziona[c] = '\0';
@@ -322,6 +331,18 @@ void client_online(void *argument){
 			goto restart_list;
 		}
 		
+		pthread_mutex_lock(sem);
+		if(connessione_richiesta[i] == 1){
+			risposta_connessione_richiesta[i] = (char *)malloc(MAX_READER);
+			strcpy(risposta_connessione_richiesta[i], seleziona);
+			risposta_connessione_richiesta[i][strlen(risposta_connessione_richiesta[i])] = '\0';
+			free(seleziona);
+			connessione_richiesta[i] = 0;
+			pthread_mutex_unlock(sem);
+			goto start_from_here;
+		}
+		pthread_mutex_unlock(sem);
+		
 		if(cerca_client(i, seleziona, dsc) == 0){
 			goto restart_list;
 		}
@@ -330,34 +351,38 @@ void client_online(void *argument){
 
 
 int cerca_client(int i, char *seleziona, int descpritor){
-	
 	char *risposta, **cerca;
 	int dsc[2], c;
 	
 	dsc[0] = descpritor;
 	
-	cerca = (char **)malloc(3*MAX_READER);
+	cerca = (char **)malloc(3*sizeof(char *));
 	
 	for(long j=0; j<PENDING; j++){
 			
 		if(i!=j){
-			cerca[0] = (char *)malloc(MAX_READER);
 			
 			pthread_mutex_lock(sem);
-			if(busy[j] == 0){
-				send(dsc[0], "\n   --- \e[1maggiornaUtente occupato in un'altra richiesta!\e[22m ---\a", strlen("\n   --- \e[1maggiornaUtente occupato in un'altra richiesta!\e[22m ---\a"), 0);
-				pthread_mutex_unlock(sem);
-				free(cerca[0]);
-				free(cerca);
-				free(seleziona);
-				return 1;
-			}
-			
 			if(tabella_thread[j]->nome_client == NULL){
+				printf("seleziona: %s\n", seleziona);
+				printf("numero: %d\n", j);
 				pthread_mutex_unlock(sem);
-				free(cerca[0]);
 				continue;
 			}
+			
+			if(strcmp(tabella_thread[j]->nome_client, seleziona) == 0){
+				if(busy[j] == 0 || tabella_thread[j]->disponibile == 0){
+					printf("NUMERO: %d\n", j);
+					printf("busy: %d\n", busy[j]);
+					printf("tabella disponibile: %d\nnome: %s\n", tabella_thread[j]->disponibile, seleziona);
+					send(dsc[0], "\n   --- \e[1mUtente occupato in un'altra richiesta!\e[22m ---\a", strlen("\n   --- \e[1mUtente occupato in un'altra richiesta!\e[22m ---\a"), 0);
+					pthread_mutex_unlock(sem);
+					free(cerca);
+					free(seleziona);
+					return 1;
+				}
+			}
+			cerca[0] = (char *)malloc(MAX_READER);
 			strcpy(cerca[0], tabella_thread[j]->nome_client);
 			pthread_mutex_unlock(sem);
 			
@@ -371,13 +396,13 @@ int cerca_client(int i, char *seleziona, int descpritor){
 				
 				pthread_mutex_lock(sem);
 				dsc[1] = fd[j];
+				printf("busy modificato\n");
 				busy[j] = 0;
 				pthread_mutex_unlock(sem);
-				
+				connessione_richiesta[j] = 0;
 				cerca[1] = (char*)malloc(MAX_READER);
 				
 				pthread_mutex_lock(sem);
-				
 				sprintf(cerca[1], "\n   --- \e[1m\e[5mHai una richiesta di chat da %s\e[25m\e[22m ---\a", tabella_thread[i]->nome_client);
 				pthread_mutex_unlock(sem);
 				
@@ -385,12 +410,37 @@ int cerca_client(int i, char *seleziona, int descpritor){
 				nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
 				free(cerca[1]);
 send(dsc[1], "   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare '\e[1mNo\e[22m' ---", strlen("   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare'\e[1mNo\e[22m'---"), 0);
-				
+
+
 				while(1){
-					risposta = (char *)malloc(MAX_READER);
-					c = recv(dsc[1], risposta, MAX_READER, 0);
 					
-					if(c == 0 || strcmp(risposta, "quit") == 0){
+					pthread_mutex_lock(sem);
+					connessione_richiesta[j] = 1;
+					pthread_mutex_unlock(sem);
+					
+					while(1){
+						pthread_mutex_lock(sem);
+						c = connessione_richiesta[j];
+						pthread_mutex_unlock(sem);
+						
+						nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
+						
+						if(c == 0) break;
+					}
+					
+					risposta = (char *)malloc(MAX_READER);
+					
+					
+					pthread_mutex_lock(sem);
+					sprintf(risposta, "%s", risposta_connessione_richiesta[j]);
+					free(risposta_connessione_richiesta[j]);
+					pthread_mutex_unlock(sem);
+					
+					risposta[strlen(risposta)] = '\0';
+					
+					printf("risposta:%s\n", risposta);
+					
+					if(strcmp(risposta, "quit") == 0){
 						printf("Client[%ld] si è disconnesso dal server\n", j);
 						free(risposta);
 						
@@ -398,8 +448,6 @@ send(dsc[1], "   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare 
 						
 						pthread_exit(NULL);
 					}
-					risposta[c] = '\0';
-					
 					
 					if(strcmp(risposta, "Si") == 0 || strcmp(risposta, "si") == 0 || strcmp(risposta, "SI") == 0){
 						free(risposta);
@@ -422,8 +470,8 @@ send(dsc[1], "   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare 
 						send(dsc[0], cerca[1], strlen(cerca[1]), 0);
 						free(cerca[1]);
 						nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
-						send(dsc[1], "\n     *** \e[1mDigita per parlare!\e[22m ***\n", strlen("\n     *** \e[1mDigita per parlare!\e[22m ***\n"), 0);
-						send(dsc[0], "\n     *** \e[1mDigita per parlare!\e[22m ***\n", strlen("\n     *** \e[1mDigita per parlare!\e[22m ***\n"), 0);
+						send(dsc[1], "\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n", strlen("\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n"), 0);
+						send(dsc[0], "\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n", strlen("\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n"), 0);
 						
 						pthread_mutex_lock(sem);
 						busy[j] = 1;
@@ -460,8 +508,9 @@ send(dsc[1], "   --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare 
 			free(cerca[0]);
 		}
 	}
-	send(dsc[0], "\n   --- \e[1mNome non trovato!\e[22m ---\a\n", strlen("\n   --- \e[1mNome non trovato!\e[22m ---\a\n"), 0);
+	send(dsc[0], "\n   --- \e[1mNome non trovato!\e[22m ---\a", strlen("\n   --- \e[1mNome non trovato!\e[22m ---\a\n"), 0);
 	free(seleziona);
+	free(cerca);
 	return 1;
 }
 
