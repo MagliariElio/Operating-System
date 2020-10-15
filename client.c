@@ -19,7 +19,7 @@ void gestione_uscita(int signo){
 	
 	
 	if(sent == 0){
-		printf("\t*** \e[1mChiusura del canale di comunicazione\e[22m ***\n");
+		printf("\t*** \e[1mChiusura del canale di comunicazione\e[22m ***\n\n\n");
 		send(sd, "quit", strlen("quit"), 0);
 		close(sd);
 		if(thread == pthread_self()){
@@ -152,7 +152,7 @@ void *gestione_comunicazione(void *argument){
 		}
 		message_server[c] = '\0';
 		
-		if(strcmp(message_server, "\n\t\t*** \e[1mDigita per parlare!\e[22m ***\n") == 0){
+		if(strcmp(message_server, "\n\t*** \e[1mDigita per parlare!\e[22m ***\n") == 0){
 			printf("%s\n", message_server);
 			sent = 1;
 			free(message_server);
