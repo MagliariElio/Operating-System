@@ -152,7 +152,7 @@ void *gestione_comunicazione(void *argument){
 		}
 		message_server[c] = '\0';
 		
-		if(strcmp(message_server, "\n\t*** \e[1mDigita per parlare!\e[22m ***\n") == 0){
+		if(strcmp(message_server, "\n\t*** \e[91m\e[1mDigita per parlare!\e[22m\e[39m ***\n") == 0){
 			printf("%s\n", message_server);
 			sent = 1;
 			free(message_server);
