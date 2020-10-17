@@ -343,18 +343,29 @@ void client_online(void *argument){
 			risposta_connessione_richiesta[i] = (char *)malloc(MAX_READER);
 			sprintf(risposta_connessione_richiesta[i], "%s", seleziona);
 			risposta_connessione_richiesta[i][strlen(risposta_connessione_richiesta[i])] = '\0';
-			printf("seleziona = %s\n", seleziona);
-			free(seleziona);
+			risposta_connessione_richiesta[strlen(risposta_connessione_richiesta[i])] = '\0';
 			connessione_richiesta[i] = 0;
 			
-			printf("Sono uscito con connessione_richiesta[%d] = %d\nrisposta_connessione_richiesta[i] = %s\n", i, connessione_richiesta[i], i, risposta_connessione_richiesta[i]);
-			
+			printf("Sono uscito con connessione_richiesta[%d] = %d\nrisposta_connessione_richiesta[%d] = %s\n", i, connessione_richiesta[i], i, risposta_connessione_richiesta[i]);
 			pthread_mutex_unlock(sem);
+			
+			if(strcmp(seleziona, "Si") == 0 || strcmp(seleziona, "si") == 0 || strcmp(seleziona, "SI") == 0 || strcmp(seleziona, "sI") == 0 || strcmp(seleziona, "yes") == 0){
+				free(seleziona);
+				while(1){
+					pthread_mutex_lock(sem);
+					c = connessione_richiesta[i];
+					pthread_mutex_unlock(sem);
+					
+					if(c == 1) comunicazione(-1, -1, -1);
+				}
+			}
 			
 			goto start_from_here;
 		}
+		
 		c = busy[i];
 		pthread_mutex_unlock(sem);
+		
 		
 		if(strcmp(seleziona, "aggiorna") == 0){
 			free(seleziona);
@@ -469,6 +480,7 @@ send(dsc[1], "  --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare '
 					
 					risposta = (char *)malloc(MAX_READER);
 					
+					printf("ok\n");
 					
 					pthread_mutex_lock(sem);
 					sprintf(risposta, "%s", risposta_connessione_richiesta[j]);
@@ -476,6 +488,8 @@ send(dsc[1], "  --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare '
 					pthread_mutex_unlock(sem);
 					
 					risposta[strlen(risposta)] = '\0';
+					
+					printf("risposta = %s\n", risposta);
 					
 					
 					if(strcmp(risposta, "quit client") == 0){
@@ -492,6 +506,9 @@ send(dsc[1], "  --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare '
 						passaggio[0] = dsc[1];
 						passaggio[1] = dsc[0];
 						passaggio[2] = j;
+						
+						connessione_richiesta[j] = 1;			//via libera per entrare in funzione
+						
 						
 						cerca[1] = (char *)malloc(MAX_READER);
 						send(dsc[0], "     ------------------------------------", strlen("     ------------------------------------"), 0);
@@ -512,7 +529,8 @@ send(dsc[1], "  --- Digitare '\e[1mSi\e[22m' per accettare altrimenti digitare '
 						
 						pthread_mutex_lock(sem);
 						busy[j] = 0;
-						pthread_kill(tabella_thread[j]->id_thread, SIGCHLD);
+						connessione_richiesta[j] = 0;
+						//pthread_kill(tabella_thread[j]->id_thread, SIGCHLD);
 						pthread_mutex_unlock(sem);
 						
 						free(cerca);
@@ -562,6 +580,7 @@ void comunicazione(int client1, long client2, long i){
 		i = passaggio[2];
 	}
 	
+	printf("Thread %d\n", i);
 	
 	char *messaggio, *uscita;
 	uscita = (char *)malloc(MAX_READER);

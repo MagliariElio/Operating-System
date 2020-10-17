@@ -14,4 +14,4 @@
 #include <string.h>
 
 #define PORT 5000
-#define MAX_READER 10000
+#define MAX_READER 100
