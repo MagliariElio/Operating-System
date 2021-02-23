@@ -317,20 +317,20 @@ void client_online(void *argument){
 		
 		pthread_mutex_lock(sem);
 		
-		printf("\ntabella_thread[%d]->disponibile = %s\n", i, tabella_thread[i]->nome_client);
-		printf("tabella_thread[%d]->disponibile = %d\n", i, tabella_thread[i]->disponibile);
-		printf("connessione_richiesta[%d] = %d\n", i, connessione_richiesta[i]);
-		printf("busy[i] = %d\n", i, busy[i]);
+		printf("\ntabella_thread[%ld]->disponibile = %s\n", i, tabella_thread[i]->nome_client);
+		printf("tabella_thread[%ld]->disponibile = %d\n", i, tabella_thread[i]->disponibile);
+		printf("connessione_richiesta[%ld] = %d\n", i, connessione_richiesta[i]);
+		printf("busy[%ld] = %d\n", i, busy[i]);
 		
 		if(connessione_richiesta[i] == 1){
-			printf("Sono entrato con connessione_richiesta[%d] = %d\n", i, connessione_richiesta[i]);
+			printf("Sono entrato con connessione_richiesta[%ld] = %d\n", i, connessione_richiesta[i]);
 			
 			risposta_connessione_richiesta[i] = (char *)malloc(MAX_READER);
 			sprintf(risposta_connessione_richiesta[i], "%s", seleziona);
 			risposta_connessione_richiesta[i][strlen(risposta_connessione_richiesta[i])] = '\0';
 			connessione_richiesta[i] = 0;
 			
-			printf("Sono uscito con connessione_richiesta[%d] = %d\nrisposta_connessione_richiesta[%d] = %s\n", i, connessione_richiesta[i], i, risposta_connessione_richiesta[i]);
+			printf("Sono uscito con connessione_richiesta[%ld] = %d\nrisposta_connessione_richiesta[%ld] = %s\n", i, connessione_richiesta[i], i, risposta_connessione_richiesta[i]);
 			pthread_mutex_unlock(sem);
 			
 			while(1){
@@ -344,7 +344,7 @@ void client_online(void *argument){
 						
 						nanosleep((const struct timespec[]){{0, 50000000L}}, NULL);
 						
-						printf("Thread %d in attesa con c = %d\n", i, c);
+						printf("Thread %ld in attesa con c = %d\n", i, c);
 						
 						if(c == 2) comunicazione(-1, -1, -1);
 					}
@@ -590,7 +590,7 @@ void comunicazione(int client1, long client2, long i){
 		i = passaggio[2];
 	}
 	
-	printf("Thread %d\n", i);
+	printf("Thread %ld\n", i);
 	
 	char *messaggio, *uscita;
 	uscita = (char *)malloc(MAX_READER);
