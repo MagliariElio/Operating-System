@@ -17,7 +17,6 @@ void exit_thread(){
 
 void gestione_uscita(){
 	
-	
 	if(sent == 0){
 		printf("\t*** \e[1mChiusura del canale di comunicazione\e[22m ***\n\n\n");
 		send(sd, "quit", strlen("quit"), 0);
@@ -36,7 +35,7 @@ void gestione_uscita(){
 	close_chat = (char *)malloc(MAX_READER);
 	sprintf(close_chat, "%s: %s", nome_client, "quit");
 	send(sd, close_chat, strlen(close_chat), 0);
-
+	printf("\033[2J\033[H");
 }
 
 
@@ -116,6 +115,7 @@ int main(){
 				free(message_input);
 				free(message_input_send);
 				pthread_kill(thread, SIGINT);
+				printf("\033[2J\033[H");
 				return 0;
 			}
 			
