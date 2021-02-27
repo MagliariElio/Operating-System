@@ -1,4 +1,6 @@
-# Operating-System a.y. 19/20
+# Operating-System a.y. 2019/2020
+
+Docente: Quaglia Francesco
 
 Realizzazione di un servizio "talk" via internet gestito tramite server.
 
